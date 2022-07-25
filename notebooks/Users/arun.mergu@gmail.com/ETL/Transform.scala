@@ -41,14 +41,25 @@ movies_genres_expld.show(5)
 // COMMAND ----------
 
 //Logic to retrive top N movies by average rating ordered by avg rating of movies which have atleast 5 ratings given
-def top_n_movies_by_avg_rating(df: DataFrame, n: Integer): DataFrame = {
-  var result_df = df.groupBy("movieId").agg(mean("rating") as "avg_rating", count("userId") as "cnt_ratings").sort( $"avg_rating".desc).filter($"cnt_ratings" >= 5).limit(n)
+def top_n_movies_by_avg_rating(ratings: DataFrame,movies: DataFrame, n: Integer): DataFrame = {
+  var top_n_movie_ids_df = ratings.groupBy("movieId").agg(mean("rating") as "avg_rating", count("userId") as "cnt_ratings").sort( $"avg_rating".desc).filter($"cnt_ratings" >= 5).limit(n)
+  val RequiredColumnNames = Seq("title","avg_rating")
+  var result_df = top_n_movie_ids_df.join(movies, top_n_movie_ids_df("movieId") === movies("movieId")).select(RequiredColumnNames.map(c => col(c)): _*).sort( $"avg_rating".desc)
   result_df.coalesce(1).write.mode("overwrite").option("header","true").csv("/mnt/output/top_"+n+"_movies")
   return result_df
 }
 
-val top_10_movies = top_n_movies_by_avg_rating(ratings_upd, 10)
-top_10_movies.show()
+val top_10_movies = top_n_movies_by_avg_rating(ratings_upd,movies_upd, 10)
+top_10_movies.show(false)
+
+// COMMAND ----------
+
+// MAGIC %fs
+// MAGIC ls /mnt/output/
+
+// COMMAND ----------
+
+display(top_10_movies)
 
 // COMMAND ----------
 
